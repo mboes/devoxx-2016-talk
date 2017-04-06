@@ -1,6 +1,5 @@
-#+TITLE: Haskell meets Java
-#+SUBTITLE: Or how I learned to stop worrying and embrace and extend
-#+AUTHOR: Mathieu Boespflug
+#+TITLE: Haskell meets +Java+ Scala
+#+AUTHOR: Mathieu Boespflug Founder at Tweag I/O
 #+EMAIL: m@tweag.io
 
 #+OPTIONS: reveal_center:t reveal_progress:t reveal_history:nil reveal_control:nil
@@ -8,6 +7,7 @@
 #+OPTIONS: reveal_width:1200 reveal_height:800
 #+OPTIONS: toc:0
 #+OPTIONS: timestamp:nil
+#+OPTIONS: reveal_title_slide:"<h1>Haskell&nbsp;meets<br/><strike>Java</strike>&nbsp;Scala</h1><h2>Mathieu&nbsp;Boespflug<br>Founder&nbsp;at&nbsp;tweag.io</h2>"
 #+REVEAL_EXTRA_CSS: ./local.css
 #+REVEAL_HLEVEL: 2
 #+REVEAL_MARGIN: 0.1
@@ -33,25 +33,7 @@ inline-r
 
 #+ATTR_REVEAL: :frag roll-in
 \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp \nbsp ...
-* Preamble
-#+BEGIN_SRC haskell
-{-# LANGUAGE DataKinds #-}                     {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FunctionalDependencies #-}        {-# LANGUAGE StaticPointers #-}
-{-# LANGUAGE GADTs #-}                         {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}         {-# LANGUAGE TypeFamilies #-}
-#+END_SRC
 * Don't reinvent the World
-** Numerical computing
-- BLAS implementations through the ages:
-  + Original BLAS code from Netlib (1960's): 40Kloc FORTRAN code.
-  + ATLAS BLAS kernels (1990's): 320-360Kloc C code.
-  + OpenBLAS/GotoBLAS kernels (2000's): 150Kloc C code, 1Mloc+ Assembly code.
-#+ATTR_REVEAL: :frag fade-in
-- Beware of the "*Ninja gap*" in numerical code.
-  + "Good" code vs "expert" hand-tuned code:
-    + *24x average*
-    + *53x worst case*
-    performance gap in representative benchmarks (Satish et al, 2012).
 ** Distributed analytics
 - *Problem:* terabytes of data available, want to map or fold the same
   function on each word.
@@ -114,29 +96,6 @@ inline-r
 ** Code blocks interacting via protocol
 #+attr_html: :width 1100px
 \nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp[[./binaryprot.svg]]
-** Use the FFI, Luke!
-- Take a page from the Haskell'98 report:
-#+BEGIN_SRC haskell
-foreign import <somelanguage> foo :: Bar -> IO Baz
-#+END_SRC
-- Just need to implement ~<somelanguage>~ support somehow.
-
-#+ATTR_REVEAL: :frag roll-in :frag_idx 1
-*Option 1:* add knowledge of the ~<somelanguage>~ calling convention
- to the compiler. No support for legacy compilers.
-#+ATTR_REVEAL: :frag roll-in :frag_idx 1
-- Problem: details of foreign calling convention often unknown / very
-  complex.
-#+REVEAL: split
-*Option 2:* Hope the foreign language knows about the C calling
-convention. Then can just call all foreign functions either directly
-or via C.
-- Advantages: fast foreign calls (only very marginally slower than
-  native Haskell calls), no compiler hacking.
-
-#+ATTR_REVEAL: :frag roll-in :frag_idx 1
-We chose *Option 2*, but we didn't want to write ~foreign import~.
-** TODO FFI diagram
 ** From FFI bindings to inline foreign code
 #+ATTR_REVEAL: :frag roll-in
 - Start from a simple premise: writing bindings by hand is painful.
@@ -157,7 +116,8 @@ We chose *Option 2*, but we didn't want to write ~foreign import~.
 * Sparkle demo (with code)
 * Architectural patterns
 ** JAR as a universal package format
-- TODO diagram
+#+attr_html: :width 600px
+\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp\nbsp[[./jar.svg]]
 ** Avoid marshalling costs
 - Vision: want foreign function calls to be as cheap as native calls
   in the common case.
@@ -183,134 +143,14 @@ main = do
   message <- reflect "Hello World!"
   [java| javax.swing.JOptionPanel.showMessageDialog(null, $message) |]
 #+END_SRC
-* Under the hood
-** Basic types
-#+BEGIN_SRC haskell
--- Type of Java objects
-newtype J (a :: JType) = J (Ptr (J a))
-
--- Type of Java types
-data JType = Class Symbol
-           | Iface Symbol
-           | Prim Symbol
-           | Array JType
-           | Void
-#+END_SRC
-#+ATTR_REVEAL: :frag fade-in
-#+BEGIN_SRC haskell
-jnull :: J a
-jnull = J nullPtr
-
-upcast :: IsReferenceType a => J a -> J ('Class "java.lang.Object")
-upcast = unsafeCast
-
--- | Unsafe type cast. Should only be used to downcast.
-unsafeCast :: J a -> J b
-unsafeCast (J x) = J (castPtr x)
-#+END_SRC
-** Foreign.JNI
-- All interaction with the JVM via the JNI.
-#+BEGIN_SRC haskell
-type JObject = J ('Class "java.lang.Object")
-type JClass = J ('Class "java.lang.Class")
-
-withJVM :: [ByteString] -> IO () -> IO ()
-findClass :: JNI.String -> IO JClass
-getMethodID :: J ('Class "java.lang.Class")
-            -> JNI.String -- ^ method name
-            -> JNI.String -- ^ method signature (disamb overload)
-            -> IO JMethodID
-
-callObjectMethod  :: J a -> JMethodID -> [JValue] -> IO JObject
-callIntMethod     :: J a -> JMethodID -> [JValue] -> IO Int32
-callBooleanMethod :: J a -> JMethodID -> [JValue] -> IO Bool
-...
-#+END_SRC
-** Language.Java
-- Want to disambiguate method overloading using Haskell types.
-  + single ~call~ function that disambiguates return type and argument
-    type overloading.
-- Want to transparently cache class ID lookups.
-#+ATTR_REVEAL: :frag fade-in
-#+BEGIN_SRC haskell
-data JValue = JBoolean Bool
-            | JInt Int32
-            | ...
-            | forall a. SingI a => JObject (J a)
-
-class Cast b where
-  unsafeCast :: JValue -> b
-instance Cast (J a) where
-  unsafeCast (JObject o) = o
-  unsafeCast _ = throw $ DynamicCastError
-instance Cast Bool
-  unsafeCast (JBoolean x) = x
-  unsafeCast _ = throw $ DynamicCastError
-instance Cast Int32
-  unsafeCast (JInt x) = x
-  ...
-#+END_SRC
-** ~call~: the swiss army knife for calling Java methods
-- Want to disambiguate method overloading using Haskell types.
-  + single ~call~ function that disambiguates return type and argument
-    type overloading.
-- Want to transparently cache class ID lookups.
-#+BEGIN_SRC haskell
-call :: forall c b. (SingI c, Coercible b ty)
-     => J ('Class c)
-     -> JNI.String -- ^ Method name
-     -> [JValue] -- ^ Arguments
-     -> IO b
-call obj mname args = do
-    let argsings = map jtypeOf args
-        retsing = sing :: Sing ty
-    let klass = unsafePerformIO $
-                findClass (referenceTypeName (sing :: Sing ('Class c)))
-    method <- getMethodID klass mname (methodSignature args retsing)
-    case retsing of
-      SPrim "boolean" -> cast <$> JBoolean <$> callBooleanMethod obj method args
-      SPrim "int" -> cast <$> JByte <$> callByteMethod obj method args
-      ...
-      _ -> cast <$> JObject <$> callObjectMethod obj method args
-#+END_SRC
-** ~call~: the swiss army knife for calling Java methods
-- Want to disambiguate method overloading using Haskell types.
-  + single ~call~ function that disambiguates return type and argument
-    type overloading.
-- Want to transparently cache class ID lookups.
-#+BEGIN_SRC haskell
-klass = unsafePerformIO $
-        findClass (referenceTypeName (sing :: Sing ('Class "java.lang.Object")))
-
-call :: JObject
-     -> JNI.String -- ^ Method name
-     -> [JValue] -- ^ Arguments
-     -> IO b
-call obj mname args = do
-    let argsings = map jtypeOf args
-        retsing = sing :: Sing ty
-    method <- getMethodID klass mname (methodSignature args retsing)
-    case retsing of
-      SPrim "boolean" -> cast <$> JBoolean <$> callBooleanMethod obj method args
-      SPrim "int" -> cast <$> JByte <$> callByteMethod obj method args
-      ...
-      _ -> cast <$> JObject <$> callObjectMethod obj method args
-#+END_SRC
-** Generating wrappers
-** Reify/Reflect
-
-** Reify/Reflect functions.
-* Challenges
-** Garbage collection
 * Closing words
+- To interop, just pretend Scala = Java + implicits.
 - *High-performance* interop is not only possible but key to
   modularity and making foreign functions first-class citizens of the
   language.
 - Always make *costs explicit to the programmer* (true for networks,
   true for interop).
 - Designed specifically to avoid compiler hacking, but in the end did
-  have to contribute a few patches to support this project. (thanks
-  Facundo!)
-
+  have to contribute a few patches to support this project.
 - Code available on [[https://github.com/tweag/sparkle][Github: tweag/sparkle]].
 - email: [[mailto:m@tweag.io][m@tweag.io]] / twitter: [[https://twitter.com/mboesp][mboesp]]

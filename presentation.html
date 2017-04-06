@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Haskell meets <del>Java</del> Scala</title>
+<meta name="author" content="(Mathieu Boespflug Founder at Tweag I/O)"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/css/reveal.css"/>
+
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/css/theme/white.css" id="theme"/>
+
+<link rel="stylesheet" href="./local.css"/>
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/lib/css/zenburn.css"/>
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'http://cdn.jsdelivr.net/reveal.js/3.0.0/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide"><h1>Haskell&nbsp;meets<br/><strike>Java</strike>&nbsp;Scala</h1><h2>Mathieu&nbsp;Boespflug<br>Founder&nbsp;at&nbsp;tweag.io</h2>
+</section>
+
+<section>
+<section id="slide-orgba18d84">
+<h2 id="orgba18d84">Inline the World</h2>
+<p class="fragment roll-in">
+inline-r
+</p>
+
+<p class="fragment roll-in">
+&nbsp; &nbsp; &nbsp; inline-c (+ language-c-inline)
+</p>
+
+<p class="fragment roll-in">
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <b>inline-java</b>
+</p>
+
+<p class="fragment roll-in">
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; inline-python?
+</p>
+
+<p class="fragment roll-in">
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &#x2026;
+</p>
+</section>
+</section>
+<section>
+<section id="slide-org6fd1579">
+<h2 id="org6fd1579">Don't reinvent the World</h2>
+<div class="outline-text-2" id="text-org6fd1579">
+</div></section>
+</section>
+<section>
+<section id="slide-orgf77d697">
+<h3 id="orgf77d697">Distributed analytics</h3>
+<ul>
+<li><b>Problem:</b> terabytes of data available, want to map or fold the same
+function on each word.</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li><p>
+<b>Down the rabbit hole we go&#x2026;</b>
+</p>
+<ul class="fragment roll-in">
+<li>need some way to ship function to where the data lives,</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>need efficient wire protocol and high-performance
+(de)serialization routines to communicate results,</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>need to handle failures and automatically rebalance load,</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>need to handle demand spikes and transparently provision more
+resources if avaiable,</li>
+<li>&#x2026;</li>
+
+</ul></li>
+<li><b>Or we can just use Apache Spark.</b> (or Hadoop, or SciDB, or &#x2026;)</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-org9a69114">
+<h2 id="org9a69114">Calling conventions</h2>
+<p width="800px">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<object type="image/svg+xml" data="./callstack.svg" class="org-svg" width="800px">
+Sorry, your browser does not support SVG.</object>
+</p>
+</section>
+</section>
+<section>
+<section id="slide-orgac80a34">
+<h2 id="orgac80a34">Approaches to interop</h2>
+<div class="outline-text-2" id="text-orgac80a34">
+</div></section>
+</section>
+<section>
+<section id="slide-orgaa886da">
+<h3 id="orgaa886da">Transpile Haskell</h3>
+<ul>
+<li>This is the <b>GHCJS way</b>.</li>
+<li>Huge engineering effort.
+<ul>
+<li>Have to implement a <b>full transpiler</b> for all of Haskell to
+JavaScript.
+<ul>
+<li>Fortunately can just focus on Core.</li>
+
+</ul></li>
+<li>But what about all those primitives?</li>
+<li><b>450+ primops</b> in GHC HEAD currently.</li>
+<li>Effectively have to <b>reimplement RTS</b>.</li>
+
+</ul></li>
+
+</ul>
+<ul class="fragment roll-in">
+<li><b>Big win:</b> single target runtime environment.
+<ul>
+<li>Might be more ubiquitous, have better runtime code specialization,
+more complete FFI&#x2026;</li>
+
+</ul></li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>The game to watch: <b>rahulmutt/ghcvm - Haskell compiled to JVM bytecode</b>.</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-org5e4868a">
+<h3 id="org5e4868a">Transpilation</h3>
+<p width="1000px">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<object type="image/svg+xml" data="./transpile.svg" class="org-svg" width="1000px">
+Sorry, your browser does not support SVG.</object>
+</p>
+</section>
+</section>
+<section>
+<section id="slide-org41c7e56">
+<h3 id="org41c7e56">Binary protocol</h3>
+<ul class="fragment roll-in">
+<li>Make everything have the <b>same calling convention</b>:
+<ol>
+<li>serialize the function name,</li>
+<li>serialize each argument one by one,</li>
+<li>Pack into a message,</li>
+<li>"send" the message to some remote message interpretation endpoint.</li>
+
+</ol></li>
+
+</ul>
+<ul class="fragment roll-in">
+<li><b>Same wire format for identifying functions, arguments</b>. But each
+language has to reinterpret canonical format into own native format.</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>Optimize the common case: intra-language calls can still use fast
+path (no serialization).</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>Slow inter-language calls. But that's okay: for many use cases
+inter-language calls are rare.</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>The canonical implementation of this idea:
+<b>nh2/call-from-haskell-from-anything</b>.</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-org2660c37">
+<h3 id="org2660c37">Code blocks interacting via protocol</h3>
+<p width="1100px">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<object type="image/svg+xml" data="./binaryprot.svg" class="org-svg" width="1100px">
+Sorry, your browser does not support SVG.</object>
+</p>
+</section>
+</section>
+<section>
+<section id="slide-org0d1c6d4">
+<h3 id="org0d1c6d4">From FFI bindings to inline foreign code</h3>
+<ul class="fragment roll-in">
+<li>Start from a simple premise: writing bindings by hand is painful.
+<ul>
+<li>too <b>low-level</b>, so need to also write wrappers</li>
+<li><b>heavyweight</b>: need a binding before calling a function.</li>
+<li>monolithic binding libraries are <b>anti-modular</b>.</li>
+
+</ul></li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>Historical approach: preprocessor tool generates bindings from
+annotated Haskell.
+<ul>
+<li>Problem: preprocessors are a pain to work with.</li>
+
+</ul></li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>Preprocessors only necessary because primitive compiler support
+intentionally bare.</li>
+
+</ul>
+<ul class="fragment roll-in">
+<li>Our solution: enable inline foreign calls. Push all the intelligence
+in custom quasiquoters.</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-org44b9823">
+<h2 id="org44b9823">inline-java Hello World live coding</h2>
+</section>
+</section>
+<section>
+<section id="slide-org53ae307">
+<h2 id="org53ae307">Sparkle demo (with code)</h2>
+</section>
+</section>
+<section>
+<section id="slide-orga43b027">
+<h2 id="orga43b027">Architectural patterns</h2>
+<div class="outline-text-2" id="text-orga43b027">
+</div></section>
+</section>
+<section>
+<section id="slide-orgb256905">
+<h3 id="orgb256905">JAR as a universal package format</h3>
+<p width="600px">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<object type="image/svg+xml" data="./jar.svg" class="org-svg" width="600px">
+Sorry, your browser does not support SVG.</object>
+</p>
+</section>
+</section>
+<section>
+<section id="slide-org9aa4917">
+<h3 id="org9aa4917">Avoid marshalling costs</h3>
+<ul>
+<li>Vision: want foreign function calls to be as cheap as native calls
+in the common case.</li>
+
+</ul>
+
+<div class="org-src-container">
+
+<pre><code class="haskell" >map :: (a -&gt; b) -&gt; [a] -&gt; b
+map f [] = []
+map f (x:xs) = f x : map f xs
+</code></pre>
+</div>
+
+<ul>
+<li>If <code>f</code> foreign and cheap, but expensive to call, then better
+implement mapping in foreign code, not Haskell.</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-org53f9ade">
+<h3 id="org53f9ade">Have an explicit cost model</h3>
+<ul>
+<li>Don't make the same mistake as RPC systems (CORBA, SOAP, etc)!</li>
+<li>In our case foreign calls <i>can</i> be as efficient as native ones. But
+sometimes need to switch between representations.
+<ul>
+<li>Representation conversion = allocation + copy.</li>
+
+</ul></li>
+<li>Costs should always be explicit.</li>
+
+</ul>
+<div class="org-src-container">
+
+<pre class="fragment fade-in"><code class="haskell" >main :: IO ()
+main = do
+  message &lt;- reflect "Hello World!"
+  [java| javax.swing.JOptionPanel.showMessageDialog(null, $message) |]
+</code></pre>
+</div>
+</section>
+</section>
+<section>
+<section id="slide-org7998afe">
+<h2 id="org7998afe">Closing words</h2>
+<ul>
+<li>To interop, just pretend Scala = Java + implicits.</li>
+<li><b>High-performance</b> interop is not only possible but key to
+modularity and making foreign functions first-class citizens of the
+language.</li>
+<li>Always make <b>costs explicit to the programmer</b> (true for networks,
+true for interop).</li>
+<li>Designed specifically to avoid compiler hacking, but in the end did
+have to contribute a few patches to support this project.</li>
+<li>Code available on <a href="https://github.com/tweag/sparkle">Github: tweag/sparkle</a>.</li>
+<li>email: <a href="mailto:m@tweag.io">m@tweag.io</a> / twitter: <a href="https://twitter.com/mboesp">mboesp</a></li>
+
+</ul>
+</section>
+</section>
+</div>
+</div>
+<script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/lib/js/head.min.js"></script>
+<script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/js/reveal.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: false,
+progress: true,
+history: false,
+center: true,
+slideNumber: 'c',
+rollingLinks: true,
+keyboard: true,
+overview: true,
+width: 1200,
+height: 800,
+margin: 0.10,
+minScale: 0.50,
+maxScale: 2.50,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'cube', // default/cube/page/concave/zoom/linear/fade/none
+transitionSpeed: 'default',
+multiplex: {
+    secret: '', // null if client
+    id: '', // id, obtained from socket.io server
+    url: '' // Location of socket.io server
+},
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }]
+});
+</script>
+</body>
+</html>
